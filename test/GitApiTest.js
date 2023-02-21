@@ -1,4 +1,4 @@
-import { MemFilesApi } from "@statewalker/files";
+import { MemFilesApi } from "@statewalker/webrun-files";
 import expect from "expect.js";
 
 describe("Git", function () {

@@ -2,7 +2,7 @@ import git from "isomorphic-git";
 import http from "isomorphic-git/http/web/index.js";
 import fs from "fs/promises";
 import LightFsAdapter from "./LightFsAdapter.js";
-import { MemFilesApi, NodeFilesApi } from "@statewalker/files";
+import { MemFilesApi, NodeFilesApi } from "@statewalker/webrun-files";
 
 Promise.resolve().then(main).catch(console.error);
 
