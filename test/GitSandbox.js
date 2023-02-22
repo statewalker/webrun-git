@@ -1,15 +1,30 @@
-import git from "isomorphic-git";
-import http from "isomorphic-git/http/web/index.js";
+import * as git from 'git-essentials'
+import {
+  makeWebHttpClient
+} from 'git-essentials/clients/WebHttpClient'
+
+const http = makeWebHttpClient({
+  fetch,
+  //transformRequestUrl: url => `https://gitcorsproxy.vercel.app/api/cors?url=${encodeURIComponent(url)}`
+})
+const dir = 'data-repo'
+const url = "https://github.com/isomorphic-git/isomorphic-git"
+
+
 import fs from "fs/promises";
 import LightFsAdapter from "./LightFsAdapter.js";
-import { MemFilesApi, NodeFilesApi } from "@statewalker/webrun-files";
+import {
+  MemFilesApi,
+  NodeFilesApi
+} from "@statewalker/webrun-files";
 
 Promise.resolve().then(main).catch(console.error);
 
-function newLocalFilesApi(){
+function newLocalFilesApi() {
   return new NodeFilesApi({
     fs,
-    rootDir: new URL("./data-workspaces", import.meta.url).pathname,
+    rootDir: new URL("./data-workspaces",
+      import.meta.url).pathname,
   });
 }
 
@@ -18,32 +33,87 @@ function newMemFilesApi() {
 }
 
 async function main() {
-  // const config = {
-  //   dir : "./isomorphic-git",
-  //   url: "https://github.com/tw-in-js/twind.git",
-  //   ref: "main",
-  //   singleBranch: true,
-  //   depth: 0
-  // };
-  const config = {
-    dir : "./twind",
-    url: "https://github.com/tw-in-js/twind.git",
-    ref: "main",
-    singleBranch: true,
-    // depth: 0
-  };
-  const inMem = false;
+
+  //  await clone({ fs, http, dir, url, depth: 1, ref: 'dist' })
+
+  const inMem = true;
   const filesApi = inMem ? newMemFilesApi() : newLocalFilesApi();
 
-  await git.clone({
-    fs: { promises: new LightFsAdapter({ filesApi }) },
-    http,
-    // corsProxy: "https://cors.isomorphic-git.org",
-    // url: "https://github.com/isomorphic-git/isomorphic-git",
-    ...config
-  });
+  const config = {
+    dir: "./test-repo",
+    url: "https://projects.statewalker.com/StateWalkerProjects/TestRepo.git",
+    ref: "main"
+  };
 
-  const logs = await git.log({fs, dir : config.dir})
+  await fs.rm(config.dir, {
+    recursive: true,
+    force: true
+  })
+
+  await fs.mkdir(config.dir, {
+    recursive: true
+  })
+
+  await git.init({
+    fs,
+    ...config
+  })
+
+  await git.branch({ fs, ...config, checkout:true })
+  
+  await git.checkout({ fs, ...config })
+
+
+  await fs.writeFile(`${config.dir}/hello.txt`, `# TEST`)
+
+  await git.add({
+    fs,
+    filepath: 'hello.txt',
+    ...config
+  })
+
+  let sha = await git.commit({
+    fs,
+    author: {
+      name: 'Mr. Test',
+      email: 'mrtest@example.com',
+    },
+    message: 'Added the hello.txt file',
+    ...config
+  })
+  console.log(sha)
+
+  let commits = await git.log({
+    fs,
+    ...config
+  })
+  console.log(commits)
+
+  commits = await git.log({
+    fs,
+    ...config
+  })
+  console.log(commits)
+
+  
+  console.log('done')
+
+  /*
+    await clone({
+      fs,//: new LightFsAdapter({ filesApi }),
+      http,
+      // corsProxy: "https://cors.isomorphic-git.org",
+      // url: "https://github.com/isomorphic-git/isomorphic-git",
+      ...config
+    });
+    */
+
+  return;
+
+  const logs = await git.log({
+    fs,
+    dir: config.dir
+  })
 
   console.log(logs);
 
