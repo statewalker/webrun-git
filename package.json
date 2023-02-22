@@ -26,7 +26,8 @@
   },
   "dependencies": {
     "@statewalker/webrun-files": "0.0.0",
-    "git-essentials": "0.0.0-development"
+    "git-essentials": "0.0.0-development",
+    "node-fetch": "^3.3.0"
   },
   "devDependencies": {
     "@statewalker/rollup": "^0.1.5",

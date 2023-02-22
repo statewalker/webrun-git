@@ -3,13 +3,32 @@ import {
   makeWebHttpClient
 } from 'git-essentials/clients/WebHttpClient'
 
-const http = makeWebHttpClient({
-  fetch,
+import {
+  makeNodeHttpClient
+} from 'git-essentials/clients/NodeHttpClient'
+
+import fetch from 'node-fetch'
+//const http = makeNodeHttpClient()
+
+const authConfig = { username: 'test-bot', password: '*testbot-tst*' }
+
+
+
+const http = makeWebHttpClient({  
+  fetch: async (url,options) => {
+    //console.log({ url, options })
+    /*
+    const { username, password } = authConfig
+    options.headers = {
+      ...options.headers,
+      'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+    }*/
+    const response = await fetch(url, options )
+   // console.log({response,headers:[...response.headers.entries()]})
+    return response;
+  }
   //transformRequestUrl: url => `https://gitcorsproxy.vercel.app/api/cors?url=${encodeURIComponent(url)}`
 })
-const dir = 'data-repo'
-const url = "https://github.com/isomorphic-git/isomorphic-git"
-
 
 import fs from "fs/promises";
 import LightFsAdapter from "./LightFsAdapter.js";
@@ -39,11 +58,16 @@ async function main() {
   const inMem = true;
   const filesApi = inMem ? newMemFilesApi() : newLocalFilesApi();
 
+  
   const config = {
     dir: "./test-repo",
-    url: "https://projects.statewalker.com/StateWalkerProjects/TestRepo.git",
-    ref: "main"
+    url: `https://projects.statewalker.com/StateWalkerProjects/TestRepo.git`,
+    //ref: "main"
   };
+  
+
+  const branch=`test/${Date.now()}`
+
 
   await fs.rm(config.dir, {
     recursive: true,
@@ -59,12 +83,17 @@ async function main() {
     ...config
   })
 
-  await git.branch({ fs, ...config, checkout:true })
-  
-  await git.checkout({ fs, ...config })
+  await git.branch({
+    fs,
+    ...config,
+    ref: branch,
+    checkout: true
+  })
+
+  //await git.checkout({ fs, ...config })
 
 
-  await fs.writeFile(`${config.dir}/hello.txt`, `# TEST`)
+  await fs.writeFile(`${config.dir}/hello.txt`, `# TEST ${Date.now()}`)
 
   await git.add({
     fs,
@@ -81,7 +110,20 @@ async function main() {
     message: 'Added the hello.txt file',
     ...config
   })
-  console.log(sha)
+  console.log({
+    sha
+  })
+
+
+  const fileList = await git.listFiles({
+    fs,
+    ...config
+  })
+
+  console.log({
+    fileList
+  });
+
 
   let commits = await git.log({
     fs,
@@ -89,13 +131,36 @@ async function main() {
   })
   console.log(commits)
 
-  commits = await git.log({
-    fs,
-    ...config
-  })
-  console.log(commits)
 
-  
+  let push = await git.push({
+    fs,
+    http,
+    dir:config.dir,
+    remote: branch,
+    url:config.url,
+    ref: branch,
+    onMessage: async m => {
+     // console.log(m)
+    },
+    onAuthSuccess:  async (...args) => {
+     // console.log(args)
+    },
+    onAuthFailures:  async (...args) => {
+     // console.log(args)
+    },
+    onAuth: () => {
+      //console.log('onAuth ici');
+      
+      const {username,password}=authConfig
+      const headers = {
+        Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+      }
+
+      return {headers}
+    } ,
+  })
+  console.log(push)
+
   console.log('done')
 
   /*
