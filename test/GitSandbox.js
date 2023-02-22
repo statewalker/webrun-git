@@ -10,21 +10,16 @@ import {
 import fetch from 'node-fetch'
 //const http = makeNodeHttpClient()
 
-const authConfig = { username: 'test-bot', password: '*testbot-tst*' }
+const authConfig = {
+  username: 'test-bot',
+  password: '*testbot-tst*'
+}
 
 
 
-const http = makeWebHttpClient({  
-  fetch: async (url,options) => {
-    //console.log({ url, options })
-    /*
-    const { username, password } = authConfig
-    options.headers = {
-      ...options.headers,
-      'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
-    }*/
-    const response = await fetch(url, options )
-   // console.log({response,headers:[...response.headers.entries()]})
+const http = makeWebHttpClient({
+  fetch: async (url, options) => {
+    const response = await fetch(url, options)
     return response;
   }
   //transformRequestUrl: url => `https://gitcorsproxy.vercel.app/api/cors?url=${encodeURIComponent(url)}`
@@ -58,16 +53,28 @@ async function main() {
   const inMem = true;
   const filesApi = inMem ? newMemFilesApi() : newLocalFilesApi();
 
-  
+
   const config = {
     dir: "./test-repo",
     url: `https://projects.statewalker.com/StateWalkerProjects/TestRepo.git`,
-    //ref: "main"
   };
-  
 
-  const branch=`test/${Date.now()}`
 
+  const branch = `test/${Date.now()}`
+  const filename= `hello-${Date.now()}.txt`
+
+  const auth = () => {
+    const {
+      username,
+      password
+    } = authConfig
+    const headers = {
+      Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+    }
+    return {
+      headers
+    }
+  }
 
   await fs.rm(config.dir, {
     recursive: true,
@@ -83,6 +90,46 @@ async function main() {
     ...config
   })
 
+  await git.addRemote({
+    fs,
+    ...config,
+    remote: 'origin'
+  })
+
+  await git.fetch({
+    fs,
+    http,
+    ...config,
+    remote: 'origin',
+    ref: 'main',
+    onAuth: auth
+  })
+
+  await git.checkout({
+    fs,
+    http,
+    ...config,
+    ref: 'main',
+    onAuth: auth
+  })
+
+  let commits = await git.log({
+    fs,
+    ...config
+  })
+  console.log({
+    commits
+  })
+
+  const { oid } =  commits.pop() ;
+
+  await git.checkout({
+    fs,
+    ...config,
+    ref: oid,
+  })
+
+
   await git.branch({
     fs,
     ...config,
@@ -90,14 +137,11 @@ async function main() {
     checkout: true
   })
 
-  //await git.checkout({ fs, ...config })
-
-
-  await fs.writeFile(`${config.dir}/hello.txt`, `# TEST ${Date.now()}`)
+  await fs.writeFile(`${config.dir}/${filename}`, `# TEST ${Date.now()}`)
 
   await git.add({
     fs,
-    filepath: 'hello.txt',
+    filepath: filename,
     ...config
   })
 
@@ -107,7 +151,7 @@ async function main() {
       name: 'Mr. Test',
       email: 'mrtest@example.com',
     },
-    message: 'Added the hello.txt file',
+    message: `Added the ${filename} file`,
     ...config
   })
   console.log({
@@ -125,41 +169,82 @@ async function main() {
   });
 
 
-  let commits = await git.log({
+  commits = await git.log({
     fs,
     ...config
   })
-  console.log(commits)
+  console.log({
+    commits
+  })
 
 
   let push = await git.push({
     fs,
     http,
-    dir:config.dir,
+    dir: config.dir,
     remote: branch,
-    url:config.url,
+    url: config.url,
     ref: branch,
-    onMessage: async m => {
-     // console.log(m)
-    },
-    onAuthSuccess:  async (...args) => {
-     // console.log(args)
-    },
-    onAuthFailures:  async (...args) => {
-     // console.log(args)
-    },
-    onAuth: () => {
-      //console.log('onAuth ici');
-      
-      const {username,password}=authConfig
-      const headers = {
-        Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
-      }
-
-      return {headers}
-    } ,
+    onAuth: auth
   })
-  console.log(push)
+  console.log({
+    push
+  })
+
+
+  // await git.pull({
+  //   fs,
+  //   ...config,
+  //   ref: 'main'
+  // })
+
+  // commits = await git.log({
+  //   fs,
+  //   ...config,
+  //   ref: 'main'
+  // })
+  // console.log({
+  //   commits
+  // })
+
+  // await git.branch({
+  //   fs,
+  //   ...config,
+  //   ref: branch,
+  //   checkout: true
+  // })
+
+
+  const merge = await git.merge({
+    fs,
+    ...config,
+    ours: branch,
+    theirs: 'main',
+    fastForward: false,
+    author: {
+      name: 'Mr. Test',
+      email: 'mrtest@example.com',
+    },
+  })
+
+  console.log({
+    merge
+  })
+
+
+  push = await git.push({
+    fs,
+    http,
+    dir: config.dir,
+    remote: branch,
+    url: config.url,
+    ref: branch,
+    onAuth: auth
+  })
+  console.log({
+    push
+  })
+
 
   console.log('done')
 
