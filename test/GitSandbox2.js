@@ -1,14 +1,5 @@
-import * as git from 'git-essentials'
-import {
-  makeWebHttpClient
-} from 'git-essentials/clients/WebHttpClient'
-
-import {
-  makeNodeHttpClient
-} from 'git-essentials/clients/NodeHttpClient'
-
-import fetch from 'node-fetch'
-//const http = makeNodeHttpClient()
+import * as git from 'isomorphic-git'
+import http from "isomorphic-git/http/node/index.js"
 
 const authConfig = {
   username: 'test-bot',
@@ -16,16 +7,7 @@ const authConfig = {
 }
 
 
-
-const http = makeWebHttpClient({
-  fetch: async (url, options) => {
-    const response = await fetch(url, options)
-    return response;
-  }
-  //transformRequestUrl: url => `https://gitcorsproxy.vercel.app/api/cors?url=${encodeURIComponent(url)}`
-})
-
-import fs from "fs/promises";
+import fsPromises from "fs/promises";
 import LightFsAdapter from "./LightFsAdapter.js";
 import {
   MemFilesApi,
@@ -63,6 +45,9 @@ async function main() {
   const branch = `test/${Date.now()}`
   const filename= `hello-${Date.now()}.txt`
 
+  const fs = {promises:fsPromises}
+  
+
   const auth = () => {
     const {
       username,
@@ -76,12 +61,12 @@ async function main() {
     }
   }
 
-  await fs.rm(config.dir, {
+  await fsPromises.rm(config.dir, {
     recursive: true,
     force: true
   })
 
-  await fs.mkdir(config.dir, {
+  await fsPromises.mkdir(config.dir, {
     recursive: true
   })
 
@@ -137,7 +122,7 @@ async function main() {
     checkout: true
   })
 
-  await fs.writeFile(`${config.dir}/${filename}`, `# TEST ${Date.now()}`)
+  await fsPromises.writeFile(`${config.dir}/${filename}`, `# TEST ${Date.now()}`)
 
   await git.add({
     fs,
