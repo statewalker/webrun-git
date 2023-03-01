@@ -1,4 +1,3 @@
-
 class Stat {
   constructor(stats) {
     this.stats = stats;
@@ -44,12 +43,15 @@ class Stat {
 /**
  * See https://isomorphic-git.org/docs/en/fs
  */
-export default class LightFsAdapter {
+export default class IsomorphicGitFs {
+  static newGitFs(filesApi) {
+    return { promises: new IsomorphicGitFs({ filesApi }) };
+  }
 
   constructor(options) {
     this.options = options;
     if (!this.filesApi) throw new Error("Files API is not defined");
-    [""]
+    [""];
   }
 
   get filesApi() {
@@ -60,7 +62,9 @@ export default class LightFsAdapter {
     console.log("readFile", path, options);
     let stop = false;
     if (options.signal) {
-      options.signal.addEventListener('abort', (event) => stop = true, { once: true });
+      options.signal.addEventListener("abort", (event) => stop = true, {
+        once: true,
+      });
     }
     const chunks = [];
     const stats = await this.stat(path);
@@ -71,24 +75,18 @@ export default class LightFsAdapter {
     }
 
     if (options.encoding) {
-      if (!chunks.length) return '';
+      if (!chunks.length) return "";
       const decoder = new TextDecoder();
-      return chunks.reduce((str, chunk) => str += decoder.decode(chunk), '');
+      return chunks.reduce((str, chunk) => str += decoder.decode(chunk), "");
     } else {
       if (!chunks.length) return new Uint8Array([]);
       return mergeChunks(chunks);
     }
-    // async function* withDecoder(it) {
-    //   const decoder = new TextDecoder();
-    //   for await (const chunk of it) {
-    //     yield decoder.decode(chunk);
-    //   }
-    // }
   }
 
   async writeFile(file, data, options = {}) {
     console.log("writeFile", arguments);
-    if ((typeof data === 'string') || (data instanceof Uint8Array)) {
+    if ((typeof data === "string") || (data instanceof Uint8Array)) {
       data = [data];
     }
     let it = asIterator(data);
@@ -98,7 +96,7 @@ export default class LightFsAdapter {
     async function* withEncoder(it) {
       const encoder = new TextEncoder();
       for await (const chunk of it) {
-        yield (typeof chunk === 'string') ? encoder.encode(chunk) : chunk;
+        yield (typeof chunk === "string") ? encoder.encode(chunk) : chunk;
       }
     }
   }
@@ -125,19 +123,12 @@ export default class LightFsAdapter {
   async stat(path, options = {}) {
     console.log("stat", path, options);
     const stat = await this.filesApi.stats(path);
-    // console.log('>>>>>>>>>>', path, stat);
-    if (!stat) throw Object.assign(new Error("Not found"), {
-      code : 'ENOENT' // || err.code === 'ENOTDIR'
-    });
+    if (!stat) {
+      throw Object.assign(new Error("Not found"), {
+        code: "ENOENT", // || err.code === 'ENOTDIR'
+      });
+    }
     return new Stat(stat);
-  }
-
-  async _getStat(path, check = true) {
-    const info = this.options.files[path];
-    console.log("_getStat", path, check, info);
-    if (!info && check)
-      throw new Error("ENOENT");
-    return info;
   }
 
   // --------------------------------------
@@ -169,14 +160,13 @@ export default class LightFsAdapter {
 }
 
 function asIterator(value) {
-  if ((value === null) || (typeof value !== 'object')) value = [];
+  if ((value === null) || (typeof value !== "object")) value = [];
   return value[Symbol.asyncIterator]
     ? value[Symbol.asyncIterator]()
     : value[Symbol.iterator]
-      ? value[Symbol.iterator]()
-      : [][Symbol.iterator]();
+    ? value[Symbol.iterator]()
+    : [][Symbol.iterator]();
 }
-
 
 function mergeChunks(chunks) {
   const size = chunks.reduce((size, chunk) => size += chunk.length, 0);

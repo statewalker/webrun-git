@@ -1,0 +1,1 @@
+export { default as IsomorphicGitFs } from "./IsomorphicGitFs.js"

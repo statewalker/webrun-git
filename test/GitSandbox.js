@@ -9,17 +9,29 @@ const authConfig = {
 };
 
 import fsPromise from "fs/promises";
-import LightFsAdapter from "./LightFsAdapter.js";
+import IsomorphicGitFs from "../src/IsomorphicGitFs.js";
 import { MemFilesApi, NodeFilesApi } from "@statewalker/webrun-files";
 
-const rootDir =  new URL("./data-workspaces", import.meta.url).pathname
+const rootDir = new URL("./data-workspaces", import.meta.url).pathname;
 
 Promise.resolve().then(main).catch(console.error);
 
+// Methods:
+// * init:
+//   - fetch(main) - get the main branch from the server
+//   - fetch(userBranch) - get the user's branch from the server
+//   - NotFound: branch(userBranch) - if it does not exist - create a new branch with this name from the main
+//   - checkout(userBranch) - get the content of the user's branch on local disk
+// * syncFromServer - get the main and user's branches from the server
+//   - fetch(userBranch) - get the user's branch from the server
+//   - NotFound: branch(userBranch) - if it does not exist - create a new branch with this name from the main
+// * syncToServer 
+//   -  syncFromServer()
+// * 
 
 function newLocalFilesApi() {
   return new NodeFilesApi({
-    fs : fsPromise,
+    fs: fsPromise,
     rootDir,
   });
 }
@@ -30,21 +42,24 @@ function newMemFilesApi() {
 
 async function main() {
   //  await clone({ fs, http, dir, url, depth: 1, ref: 'dist' })
-  const dir = "./workspace"
+  const dir = "./workspace";
 
   const inMem = true;
   const filesApi = inMem ? newMemFilesApi() : newLocalFilesApi();
 
   // const fs = { promises : fsPromise };
-  const fs = { promises: new LightFsAdapter({ filesApi }) };
+  const fs = IsomorphicGitFs.newGitFs(filesApi);
 
   const config = {
     dir,
     url: `https://projects.statewalker.com/StateWalkerProjects/TestRepo.git`,
   };
 
-  const branch = `test/${Date.now()}`;
-  const filename = `hello-${Date.now()}.txt`;
+  // const branch = `test/${Date.now()}`;
+  // const filename = `hello-${Date.now()}.txt`;
+  const stamp = Date.now();
+  const branch = `users/MrsTest`;
+  const filename = `hello.txt`;
 
   const auth = () => {
     const {
@@ -61,8 +76,7 @@ async function main() {
     };
   };
 
-  await filesApi.remove(config.dir, { recursive : true });
-
+  await filesApi.remove(config.dir, { recursive: true });
 
   await git.init({
     fs,
@@ -75,6 +89,7 @@ async function main() {
     remote: "origin",
   });
 
+  // Fetch the main branch
   await git.fetch({
     fs,
     http,
@@ -92,8 +107,32 @@ async function main() {
     onAuth: auth,
   });
 
+  // Fetch the current branch (if any)
+  // Or create a new one if it does not exist
+  try {
+    await git.fetch({
+      fs,
+      http,
+      ...config,
+      remote: "origin",
+      ref: branch,
+      onAuth: auth,
+    });
+  } catch (err) {
+    // console.error(err);
+    if (err.code !== 'NotFoundError') throw err;
+    await git.branch({
+      fs,
+      http,
+      ...config,
+      ref: branch,
+      checkout : false,
+      onAuth: auth,
+    });
+  }
+
   let fileList;
-  
+
   let commits = await git.log({
     fs,
     ...config,
@@ -102,31 +141,38 @@ async function main() {
     commits,
   });
 
-  const { oid } = commits.pop();
+  // const { oid } = commits.pop();
+
+  // await git.checkout({
+  //   fs,
+  //   ...config,
+  //   ref: oid,
+  // });
+
+  // fileList = await git.listFiles({
+  //   fs,
+  //   ...config,
+  // });
+  // console.log({
+  //   fileList,
+  // });
+
+  // await git.branch({
+  //   fs,
+  //   ...config,
+  //   ref: branch,
+  //   checkout: true,
+  // });
 
   await git.checkout({
     fs,
     ...config,
-    ref: oid,
-  });
-
-  fileList = await git.listFiles({
-    fs,
-    ...config,
-  });
-  console.log({
-    fileList,
-  });
-
-
-  await git.branch({
-    fs,
-    ...config,
     ref: branch,
-    checkout: true,
   });
 
-  await filesApi.write(`${config.dir}/${filename}`, [new TextEncoder().encode(`# TEST ABC ${Date.now()}`)]);
+  await filesApi.write(`${config.dir}/${filename}`, [
+    new TextEncoder().encode(`# TEST ABC ${Date.now()}`),
+  ]);
 
   await git.add({
     fs,
@@ -140,7 +186,7 @@ async function main() {
       name: "Mr. Test",
       email: "mrtest@example.com",
     },
-    message: `Added the ${filename} file`,
+    message: `Update the ${filename} file. Stamp: ${stamp}.`,
     ...config,
   });
   console.log({
@@ -156,7 +202,6 @@ async function main() {
     fileList,
   });
 
-  
   commits = await git.log({
     fs,
     ...config,
@@ -177,6 +222,7 @@ async function main() {
   console.log({
     push,
   });
+
 
   // await git.pull({
   //   fs,
@@ -239,15 +285,13 @@ async function main() {
 
   /*
     await clone({
-      fs,//: new LightFsAdapter({ filesApi }),
+      fs,//: new IsomorphicGitFs({ filesApi }),
       http,
       // corsProxy: "https://cors.isomorphic-git.org",
       // url: "https://github.com/isomorphic-git/isomorphic-git",
       ...config
     });
     */
-
-  return;
 
   const logs = await git.log({
     fs,
