@@ -1,5 +1,5 @@
 import * as git from "isomorphic-git";
-import { IsomorphicGitFs } from "@statewalker/webrun-git";
+import IsomorphicGitFs from "./IsomorphicGitFs.js";
 import resolvePath from "./resolvePath.js";
 
 /**
