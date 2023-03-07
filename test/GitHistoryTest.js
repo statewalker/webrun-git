@@ -44,20 +44,20 @@ describe("GitHistory", function () {
   });
 
   it(`should define default git and working directories`, async () => {
-    const api = newGitHistory();
+    const api = await newGitHistory();
     expect(api.workDir).to.be("/");
     expect(api.gitDir).to.be("/.git");
   });
 
   it(`should be able to overload default git and working directories (1)`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/a/b/c",
     });
     expect(api.workDir).to.be("/a/b/c");
     expect(api.gitDir).to.be("/a/b/c/.git");
   });
   it(`should be able to overload default git and working directories (2)`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/a/b/c",
       gitDir: "/.xyz",
     });
@@ -65,7 +65,7 @@ describe("GitHistory", function () {
     expect(api.gitDir).to.be("/.xyz");
   });
   it(`should be able to overload default git and working directories (3)`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "a/b/c/",
       gitDir: ".xyz",
     });

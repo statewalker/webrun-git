@@ -27,9 +27,8 @@ export default class GitHistory {
       throw new Error("The user's branch is not defined");
     }
     this._fs = IsomorphicGitFs.newGitFs(this.filesApi);
-    
   }
-  
+
   get git() {
     return this.options.git;
   }
@@ -72,10 +71,10 @@ export default class GitHistory {
     if (this.options.log) this.options.log(...args);
   }
 
-  async checkout({ commitId } = {})  {
+  async checkout({ commitId } = {}) {
     await this.init();
     return await this._run("checkout", {
-      ref : commitId
+      ref: commitId,
     });
   }
 
@@ -97,7 +96,7 @@ export default class GitHistory {
   async getLog() {
     await this.init();
     return await this._run("log", {
-      ref : await this.getCurrentBranch()
+      ref: await this.getCurrentBranch(),
     });
   }
 
@@ -132,6 +131,7 @@ export default class GitHistory {
     { filter = () => true, branchName, message } = {},
   ) {
     branchName = branchName || await this.getCurrentBranch();
+    let commitId;
     const list = await this._visitNonCommittedFiles({
       filter,
       action: async (filepath) => await this._run("add", { filepath }),
@@ -139,9 +139,12 @@ export default class GitHistory {
     if (list.length) {
       message = message ? message + "\n\n" : "";
       message += list.join("\n");
-      await this._run("commit", { message, ref: branchName });
+      commitId = await this._run("commit", { message, ref: branchName });
     }
-    return list;
+    return {
+      commitId,
+      files : list,
+    };
   }
 
   async init() {

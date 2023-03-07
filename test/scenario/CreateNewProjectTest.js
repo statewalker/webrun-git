@@ -1,9 +1,9 @@
 import expect from "expect.js";
-import { newGitHistory, writeFiles, readFileContent } from "../testUtils.js";
+import { newGitHistory, readFileContent, writeFiles } from "../testUtils.js";
 
 describe("Create New Project", function () {
   it(`should initialize git history with the corresponding folders`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/abc/cde",
       gitDir: "/toto/.git",
     });
@@ -35,14 +35,14 @@ describe("Create New Project", function () {
   });
 
   it(`should initialize default branches and switch to the working branch`, async () => {
-    const api = newGitHistory({});
+    const api = await newGitHistory({});
     const branches = await api.getBranches();
     expect(branches).to.eql(["main", "private"]);
     expect(await api.getCurrentBranch()).to.eql("private");
   });
 
   it(`should initialize custom working and main branches`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       mainBranch: "xyz",
       workingBranch: "zyx",
     });
@@ -52,7 +52,7 @@ describe("Create New Project", function () {
   });
 
   it(`should initialize git repository in an existing folder`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/workspace/projectOne",
       gitDir: "/workspace/projectOne/.git",
       files: {
@@ -72,7 +72,7 @@ describe("Create New Project", function () {
   });
 
   it(`should not add existing files to the history`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/workspace/projectOne",
       gitDir: "/workspace/projectOne/.git",
       files: {
@@ -91,7 +91,7 @@ describe("Create New Project", function () {
   });
 
   it(`should be able to check if files are ignored`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/projectOne",
       gitDir: "/projectOne/.git",
       files: {
@@ -109,7 +109,7 @@ describe("Create New Project", function () {
   });
 
   it(`should be able to ignore files using .gitignore`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/projectOne",
       gitDir: "/projectOne/.git",
       files: {
@@ -133,7 +133,7 @@ describe("Create New Project", function () {
   });
 
   it(`should be able to save files`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/projectOne",
       gitDir: "/projectOne/.git",
       files: {
@@ -156,8 +156,8 @@ describe("Create New Project", function () {
       "/projectOne/deep/sub/folder/xyz.txt": "ignored",
     });
 
-    const savedFiles = await api.saveFiles();
-    expect(savedFiles).to.eql(["abc.md", "efg.md"]);
+    const { files } = await api.saveFiles();
+    expect(files).to.eql(["abc.md", "efg.md"]);
 
     results = {};
     for await (let fileInfo of api.getFilesStatus()) {
@@ -172,7 +172,7 @@ describe("Create New Project", function () {
   });
 
   it(`should save only modified/added files`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/projectOne",
       gitDir: "/projectOne/.git",
       files: {
@@ -183,19 +183,21 @@ describe("Create New Project", function () {
         "/projectOne/.gitignore": `*.txt`,
       },
     });
-    let savedFiles = await api.saveFiles();
-    expect(savedFiles).to.eql(["abc.md", "efg.md"]);
+
+    let files;
+    ({ files } = await api.saveFiles());
+    expect(files).to.eql(["abc.md", "efg.md"]);
 
     await writeFiles(api.filesApi, {
       "/projectOne/efg.md": "EFG File 123",
     });
 
-    savedFiles = await api.saveFiles();
-    expect(savedFiles).to.eql(["efg.md"]);
+    ({ files } = await api.saveFiles());
+    expect(files).to.eql(["efg.md"]);
   });
 
   it(`should create multiple version and get the history of modifications`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/projectOne",
       gitDir: "/projectOne/.git",
       files: {
@@ -211,17 +213,17 @@ describe("Create New Project", function () {
     expect(Array.isArray(history)).to.be(true);
     expect(history.length).to.be(1);
 
-    let savedFiles = await api.saveFiles();
+    let { files } = await api.saveFiles();
     history = await api.getLog();
     expect(history.length).to.be(2);
-    expect(savedFiles).to.eql(["abc.md", "efg.md"]);
+    expect(files).to.eql(["abc.md", "efg.md"]);
     expect(history[0].commit.message).to.eql(`abc.md\nefg.md\n`);
 
     await writeFiles(api.filesApi, {
       "/projectOne/efg.md": "EFG File 123",
     });
-    savedFiles = await api.saveFiles();
-    expect(savedFiles).to.eql(["efg.md"]);
+    ({ files } = await api.saveFiles());
+    expect(files).to.eql(["efg.md"]);
 
     history = await api.getLog();
     expect(history.length).to.be(3);
@@ -230,12 +232,12 @@ describe("Create New Project", function () {
     await writeFiles(api.filesApi, {
       "/projectOne/efg.md": "EFG File 456",
     });
-    savedFiles = await api.saveFiles();
-    expect(savedFiles).to.eql(["efg.md"]);
+    ({ files } = await api.saveFiles());
+    expect(files).to.eql(["efg.md"]);
   });
 
   it(`should restore previous versions`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir: "/projectOne",
       gitDir: "/projectOne/.git",
       files: {
@@ -257,7 +259,6 @@ describe("Create New Project", function () {
     });
     await api.saveFiles();
 
-
     let text = await readFileContent(api.filesApi, "/projectOne/efg.md");
     expect(text).to.eql("EFG File 456");
 
@@ -268,13 +269,11 @@ describe("Create New Project", function () {
     text = await readFileContent(api.filesApi, "/projectOne/efg.md");
     expect(text).to.eql("EFG File 123");
 
-
-    expect(history[0].commit.message).to.eql(`efg.md\n`)
-
+    expect(history[0].commit.message).to.eql(`efg.md\n`);
   });
   /* * /
   it(`should be able to save files in the history`, async () => {
-    const api = newGitHistory({
+    const api = await newGitHistory({
       workDir : "/workspace/projectOne",
       gitDir : "/workspace/projectOne/.git",
       files: {

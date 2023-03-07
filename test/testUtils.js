@@ -2,8 +2,20 @@ import { MemFilesApi } from "@statewalker/webrun-files";
 import GitHistory from "../src/GitHistory.js";
 import * as git from "isomorphic-git";
 
-export function newGitHistory({ files, userName = "JohnSmith", ...options } = {}) {
-  const filesApi = new MemFilesApi({ git, files });
+// import { NodeFilesApi } from "@statewalker/webrun-files";
+// import fsPromises from "fs/promises";
+// const __dirname = new URL(".", import.meta.url).pathname;
+
+export async function newGitHistory({ files, userName = "JohnSmith", ...options } = {}) {
+  const filesApi = new MemFilesApi();
+  // const filesApi = new NodeFilesApi({
+  //   rootDir : __dirname + "test-dir",
+  //   fs : fsPromises
+  // })
+
+  await filesApi.remove('/');
+  await writeFiles(filesApi, files);
+
   const history = new GitHistory({
     git,
     userName,
@@ -14,6 +26,7 @@ export function newGitHistory({ files, userName = "JohnSmith", ...options } = {}
 }
 
 export async function writeFiles(api, files) {
+  if (!files) return ;
   for (const [path, content] of Object.entries(files)) {
     await writeFileContent(api, path, content);
   }
