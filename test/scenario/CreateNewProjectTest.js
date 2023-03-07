@@ -1,5 +1,5 @@
 import expect from "expect.js";
-import { newGitHistory } from "../testUtils.js";
+import { newGitHistory, writeFiles, readFileContent } from "../testUtils.js";
 
 describe("Create New Project", function () {
   it(`should initialize git history with the corresponding folders`, async () => {
@@ -51,7 +51,7 @@ describe("Create New Project", function () {
     expect(await api.getCurrentBranch()).to.eql("zyx");
   });
 
-  it(`should initialize git repositoryb in an existing folder`, async () => {
+  it(`should initialize git repository in an existing folder`, async () => {
     const api = newGitHistory({
       workDir: "/workspace/projectOne",
       gitDir: "/workspace/projectOne/.git",
@@ -171,6 +171,107 @@ describe("Create New Project", function () {
     });
   });
 
+  it(`should save only modified/added files`, async () => {
+    const api = newGitHistory({
+      workDir: "/projectOne",
+      gitDir: "/projectOne/.git",
+      files: {
+        "/projectOne/abc.md": "ABC File",
+        "/projectOne/cde.txt": "CDE File",
+        "/projectOne/efg.md": "EFG File",
+        "/projectOne/deep/sub/folder/xyz.txt": "XYZ File",
+        "/projectOne/.gitignore": `*.txt`,
+      },
+    });
+    let savedFiles = await api.saveFiles();
+    expect(savedFiles).to.eql(["abc.md", "efg.md"]);
+
+    await writeFiles(api.filesApi, {
+      "/projectOne/efg.md": "EFG File 123",
+    });
+
+    savedFiles = await api.saveFiles();
+    expect(savedFiles).to.eql(["efg.md"]);
+  });
+
+  it(`should create multiple version and get the history of modifications`, async () => {
+    const api = newGitHistory({
+      workDir: "/projectOne",
+      gitDir: "/projectOne/.git",
+      files: {
+        "/projectOne/abc.md": "ABC File",
+        "/projectOne/cde.txt": "CDE File",
+        "/projectOne/efg.md": "EFG File",
+        "/projectOne/deep/sub/folder/xyz.txt": "XYZ File",
+        "/projectOne/.gitignore": `*.txt`,
+      },
+    });
+
+    let history = await api.getLog();
+    expect(Array.isArray(history)).to.be(true);
+    expect(history.length).to.be(1);
+
+    let savedFiles = await api.saveFiles();
+    history = await api.getLog();
+    expect(history.length).to.be(2);
+    expect(savedFiles).to.eql(["abc.md", "efg.md"]);
+    expect(history[0].commit.message).to.eql(`abc.md\nefg.md\n`);
+
+    await writeFiles(api.filesApi, {
+      "/projectOne/efg.md": "EFG File 123",
+    });
+    savedFiles = await api.saveFiles();
+    expect(savedFiles).to.eql(["efg.md"]);
+
+    history = await api.getLog();
+    expect(history.length).to.be(3);
+    expect(history[0].commit.message).to.eql(`efg.md\n`);
+
+    await writeFiles(api.filesApi, {
+      "/projectOne/efg.md": "EFG File 456",
+    });
+    savedFiles = await api.saveFiles();
+    expect(savedFiles).to.eql(["efg.md"]);
+  });
+
+  it(`should restore previous versions`, async () => {
+    const api = newGitHistory({
+      workDir: "/projectOne",
+      gitDir: "/projectOne/.git",
+      files: {
+        "/projectOne/abc.md": "ABC File",
+        "/projectOne/cde.txt": "CDE File",
+        "/projectOne/efg.md": "EFG File",
+        "/projectOne/deep/sub/folder/xyz.txt": "XYZ File",
+        "/projectOne/.gitignore": `*.txt`,
+      },
+    });
+
+    await api.saveFiles();
+    await writeFiles(api.filesApi, {
+      "/projectOne/efg.md": "EFG File 123",
+    });
+    await api.saveFiles();
+    await writeFiles(api.filesApi, {
+      "/projectOne/efg.md": "EFG File 456",
+    });
+    await api.saveFiles();
+
+
+    let text = await readFileContent(api.filesApi, "/projectOne/efg.md");
+    expect(text).to.eql("EFG File 456");
+
+    const history = await api.getLog();
+    const commitId = history[1].oid;
+    await api.checkout({ commitId });
+
+    text = await readFileContent(api.filesApi, "/projectOne/efg.md");
+    expect(text).to.eql("EFG File 123");
+
+
+    expect(history[0].commit.message).to.eql(`efg.md\n`)
+
+  });
   /* * /
   it(`should be able to save files in the history`, async () => {
     const api = newGitHistory({

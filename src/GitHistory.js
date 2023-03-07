@@ -67,6 +67,13 @@ export default class GitHistory {
     if (this.options.log) this.options.log(...args);
   }
 
+  async checkout({ commitId } = {})  {
+    await this.init();
+    return await this._run("checkout", {
+      ref : commitId
+    });
+  }
+
   async _run(method, options = {}) {
     this.log(`git.${method}(`, options, `)`);
     return await git[method]({
@@ -79,6 +86,13 @@ export default class GitHistory {
         email: this.userEmail,
       },
       ...options,
+    });
+  }
+
+  async getLog() {
+    await this.init();
+    return await this._run("log", {
+      ref : await this.getCurrentBranch()
     });
   }
 
@@ -100,8 +114,8 @@ export default class GitHistory {
   async isIgnored(path) {
     await this.init();
     return await this._run("isIgnored", {
-      filepath: this._toLocalPath(path)
-    })
+      filepath: this._toLocalPath(path),
+    });
   }
 
   async saveFiles(...args) {
@@ -110,16 +124,16 @@ export default class GitHistory {
   }
 
   async _saveFiles(
-    { filter = () => true, branchName = this.workingBranch, message } =
-      {},
+    { filter = () => true, branchName, message } = {},
   ) {
+    branchName = branchName || await this.getCurrentBranch();
     const list = await this._visitNonCommittedFiles({
       filter,
       action: async (filepath) => await this._run("add", { filepath }),
     });
     if (list.length) {
       message = message ? message + "\n\n" : "";
-      message += ["Save:", ...list].join("\n - ");
+      message += list.join("\n");
       await this._run("commit", { message, ref: branchName });
     }
     return list;
