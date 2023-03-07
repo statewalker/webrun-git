@@ -12,7 +12,7 @@ class Stat {
     return this.stats.size || 0;
   }
   get ino() {
-    return;
+    return undefined;
   }
   get mtimeMs() {
     return this.stats.lastModified || 0;
@@ -59,10 +59,13 @@ export default class IsomorphicGitFs {
   }
 
   async readFile(path, options = {}) {
-    console.log("readFile", path, options);
+    this._log("readFile", path, options);
+    if (typeof options === 'string') {
+      options = { encoding : options };
+    }
     let stop = false;
     if (options.signal) {
-      options.signal.addEventListener("abort", (event) => stop = true, {
+      options.signal.addEventListener("abort", () => stop = true, {
         once: true,
       });
     }
@@ -84,8 +87,8 @@ export default class IsomorphicGitFs {
     }
   }
 
-  async writeFile(file, data, options = {}) {
-    console.log("writeFile", arguments);
+  async writeFile(file, data /*, options = {} */) {
+    this._log("writeFile", arguments);
     if ((typeof data === "string") || (data instanceof Uint8Array)) {
       data = [data];
     }
@@ -102,12 +105,12 @@ export default class IsomorphicGitFs {
   }
 
   async unlink(path) {
-    console.log("unlink", path);
+    this._log("unlink", path);
     await this.filesApi.remove(path);
   }
 
   async readdir(path, options = {}) {
-    console.log("readdir", path, options);
+    this._log("readdir", path, options);
     const list = [];
     for await (const { name } of this.filesApi.list(path)) {
       list.push(name);
@@ -116,12 +119,12 @@ export default class IsomorphicGitFs {
   }
 
   async mkdir(path, mode) {
-    console.log("mkdir", path, mode);
+    this._log("mkdir", path, mode);
     // await this.filesApi.write(`${path}/.placeholder`, []);
   }
 
   async stat(path, options = {}) {
-    console.log("stat", path, options);
+    this._log("stat", path, options);
     const stat = await this.filesApi.stats(path);
     if (!stat) {
       throw Object.assign(new Error("Not found"), {
@@ -133,29 +136,33 @@ export default class IsomorphicGitFs {
 
   // --------------------------------------
   async rmdir(path) {
-    console.log("rmdir", path);
+    this._log("rmdir", path);
     await this.filesApi.remove(path);
   }
 
   async lstat(path, options) {
-    console.log("lstat", path, options);
+    this._log("lstat", path, options);
     return await this.stat(path, options);
   }
 
   // // --------------------------------------
   async readlink(path, options) {
-    console.log("readlink", path, options);
+    this._log("readlink", path, options);
     throw new Error("Not implemented");
   }
 
   async symlink(target, path, type) {
-    console.log("symlink", target, path, type);
+    this._log("symlink", target, path, type);
     throw new Error("Not implemented");
   }
 
   async chmod(path, mode) {
-    console.log("chmod", path, mode);
+    this._log("chmod", path, mode);
     throw new Error("Not implemented");
+  }
+
+  _log(...args) {
+    if (this.options.log) this.options.log(...args);
   }
 }
 

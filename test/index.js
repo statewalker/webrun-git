@@ -1,1 +1,3 @@
-import "./GitApiTest.js";
+import "./resolvePathTest.js";
+import "./GitHistoryTest.js";
+import "./scenario/index.js";
