@@ -139,11 +139,19 @@ export default class GitHistory {
     if (list.length) {
       message = message ? message + "\n\n" : "";
       message += list.join("\n");
-      commitId = await this._run("commit", { message, ref: branchName });
+      // commitId = await this._run("commit", { message, ref: branchName });
+      const lastBranchCommitId = await this._run("resolveRef", { ref: branchName });
+      commitId = await this._run("commit", {
+        message,
+        ref: branchName,
+        noCheckout: true,
+        noUpdateBranch: false,
+        parent: [lastBranchCommitId],
+      });
     }
     return {
       commitId,
-      files : list,
+      files: list,
     };
   }
 
@@ -246,7 +254,7 @@ export default class GitHistory {
         ref: branchName,
       });
     }
-    await this._run("checkout", { ref: branchName, force: true });
+    await this._run("checkout", { ref: branchName });
     return true;
   }
 
