@@ -25,12 +25,11 @@
     "default": "./src/index.js"
   },
   "dependencies": {
-    "@statewalker/webrun-files": "0.0.0",
-    "isomorphic-git": "^1.21.0",
-    "node-fetch": "^3.3.0"
+    "@statewalker/webrun-files": "0.0.0"
   },
   "devDependencies": {
     "@statewalker/rollup": "^0.1.5",
+    "isomorphic-git": "^1.21.0",
     "eslint": "^8",
     "expect.js": "^0.3",
     "mocha": "^10",

@@ -1,4 +1,3 @@
-import * as git from "isomorphic-git";
 import IsomorphicGitFs from "./IsomorphicGitFs.js";
 import resolvePath from "./resolvePath.js";
 
@@ -21,12 +20,18 @@ import resolvePath from "./resolvePath.js";
 export default class GitHistory {
   constructor(options = {}) {
     this.options = options;
+    if (!this.git) throw new Error("IsomorphicGit API is not defined.");
     if (!this.filesApi) throw new Error("FilesApi is not defined");
     if (!this.userName) throw new Error("The user's name is not defined");
     if (!this.workingBranch) {
       throw new Error("The user's branch is not defined");
     }
     this._fs = IsomorphicGitFs.newGitFs(this.filesApi);
+    
+  }
+  
+  get git() {
+    return this.options.git;
   }
 
   get filesApi() {
@@ -76,7 +81,7 @@ export default class GitHistory {
 
   async _run(method, options = {}) {
     this.log(`git.${method}(`, options, `)`);
-    return await git[method]({
+    return await this.git[method]({
       fs: this._fs,
       dir: this.workDir,
       gitdir: this.gitDir,

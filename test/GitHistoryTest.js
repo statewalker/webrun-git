@@ -1,15 +1,30 @@
 import { MemFilesApi, NodeFilesApi } from "@statewalker/webrun-files";
+import * as git from "isomorphic-git";
 import GitHistory from "../src/GitHistory.js";
 import expect from "expect.js";
 import { newGitHistory } from "./testUtils.js";
 
 describe("GitHistory", function () {
 
+  it(`should rise an error if there is there is no Isomorphic Git instances defined`, async () => {
+    let error;
+    try {
+      const git = undefined;      
+      new GitHistory({ git, filesApi : new MemFilesApi(), userName: "JohnSmith" });
+    } catch (e) {
+      error = e;
+    }
+    expect(error instanceof Error).to.be(true);
+    expect(error.message).to.eql("IsomorphicGit API is not defined.");
+  });
+
+
+
   it(`should rise an error if there is no FilesApi defined`, async () => {
     let error;
     try {
       const filesApi = undefined;
-      new GitHistory({ filesApi, userName: "JohnSmith" });
+      new GitHistory({ git, filesApi, userName: "JohnSmith" });
     } catch (e) {
       error = e;
     }
@@ -20,7 +35,7 @@ describe("GitHistory", function () {
   it(`should rise an error if there is no user's name defined`, async () => {
     let error;
     try {
-      new GitHistory({ filesApi: new MemFilesApi(), userName: undefined });
+      new GitHistory({ git, filesApi: new MemFilesApi(), userName: undefined });
     } catch (e) {
       error = e;
     }
@@ -61,6 +76,7 @@ describe("GitHistory", function () {
   it(`should successfully create the .git folder during the history initialization`, async () => {
     const filesApi = new MemFilesApi();
     const api = new GitHistory({
+      git,
       userName: "JohnSmith",
       userEmail: "john.smith@foo.bar",
       // userBranch : "john-smith",

@@ -1,9 +1,11 @@
 import { MemFilesApi } from "@statewalker/webrun-files";
 import GitHistory from "../src/GitHistory.js";
+import * as git from "isomorphic-git";
 
 export function newGitHistory({ files, userName = "JohnSmith", ...options } = {}) {
-  const filesApi = new MemFilesApi({ files });
+  const filesApi = new MemFilesApi({ git, files });
   const history = new GitHistory({
+    git,
     userName,
     ...options,
     filesApi,
