@@ -139,15 +139,21 @@ export default class GitHistory {
     if (list.length) {
       message = message ? message + "\n\n" : "";
       message += list.join("\n");
-      // commitId = await this._run("commit", { message, ref: branchName });
-      const lastBranchCommitId = await this._run("resolveRef", { ref: branchName });
-      commitId = await this._run("commit", {
-        message,
-        ref: branchName,
-        noCheckout: true,
-        noUpdateBranch: false,
-        parent: [lastBranchCommitId],
+      commitId = await this._run("commit", { message, ref: branchName });
+      // FIXME: THIS IS A HACK! (a workaround the bug of the isomorphic-git);
+      await this._run("writeRef", {
+        ref: `refs/heads/${branchName}`,
+        value: commitId,
+        force: true,
       });
+      // const lastBranchCommitId = await this._run("resolveRef", { ref: branchName });
+      // commitId = await this._run("commit", {
+      //   message,
+      //   ref: branchName,
+      //   noCheckout: true,
+      //   noUpdateBranch: false,
+      //   parent: [lastBranchCommitId],
+      // });
     }
     return {
       commitId,

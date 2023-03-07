@@ -164,9 +164,9 @@ describe("Create New Project", function () {
       results[fileInfo.path] = fileInfo.status;
     }
     expect(results).to.eql({
-      "/projectOne/abc.md": "added",
+      "/projectOne/abc.md": "unmodified",
       "/projectOne/cde.txt": "ignored",
-      "/projectOne/efg.md": "added",
+      "/projectOne/efg.md": "unmodified",
       "/projectOne/deep/sub/folder/xyz.txt": "ignored",
     });
   });
