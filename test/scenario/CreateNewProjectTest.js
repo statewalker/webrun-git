@@ -264,7 +264,7 @@ describe("Create New Project", function () {
 
     const history = await api.getLog();
     const commitId = history[1].oid;
-    await api.checkout({ commitId });
+    await api.checkout({ ref : commitId });
 
     text = await readFileContent(api.filesApi, "/projectOne/efg.md");
     expect(text).to.eql("EFG File 123");

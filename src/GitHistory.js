@@ -71,26 +71,9 @@ export default class GitHistory {
     if (this.options.log) this.options.log(...args);
   }
 
-  async checkout({ commitId } = {}) {
+  async checkout({ ref } = {}) {
     await this.init();
-    return await this._run("checkout", {
-      ref: commitId,
-    });
-  }
-
-  async _run(method, options = {}) {
-    this.log(`git.${method}(`, options, `)`);
-    return await this.git[method]({
-      fs: this._fs,
-      dir: this.workDir,
-      gitdir: this.gitDir,
-      //   ref: this.workingBranch,
-      author: {
-        name: this.userName,
-        email: this.userEmail,
-      },
-      ...options,
-    });
+    return await this._checkout({ ref });
   }
 
   async getLog() {
@@ -127,6 +110,40 @@ export default class GitHistory {
     return await this._saveFiles(...args);
   }
 
+  async init() {
+    return this._initializationPromise = this._initializationPromise ||
+      Promise.resolve().then(() => this._init());
+  }
+
+  _expandRef(ref) {
+    if (
+      !ref.match(/^[0-9a-f]{5,40}$/) && ref.split("/") === 1 && ref !== "HEAD"
+    ) {
+      ref = `refs/heads/${ref}`;
+    }
+    return ref;
+  }
+
+  async _checkout({ ref } = {}) {
+    ref = this._expandRef(ref);
+    return await this._run("checkout", { ref });
+  }
+
+  async _run(method, options = {}) {
+    this.log(`git.${method}(`, options, `)`);
+    return await this.git[method]({
+      fs: this._fs,
+      dir: this.workDir,
+      gitdir: this.gitDir,
+      //   ref: this.workingBranch,
+      author: {
+        name: this.userName,
+        email: this.userEmail,
+      },
+      ...options,
+    });
+  }
+
   async _saveFiles(
     { filter = () => true, branchName, message } = {},
   ) {
@@ -146,25 +163,12 @@ export default class GitHistory {
         value: commitId,
         force: true,
       });
-      await this._run("checkout", { ref: `refs/heads/${branchName}` });
-      // const lastBranchCommitId = await this._run("resolveRef", { ref: branchName });
-      // commitId = await this._run("commit", {
-      //   message,
-      //   ref: branchName,
-      //   noCheckout: true,
-      //   noUpdateBranch: false,
-      //   parent: [lastBranchCommitId],
-      // });
+      await this._checkout({ ref: branchName });
     }
     return {
       commitId,
       files: list,
     };
-  }
-
-  async init() {
-    return this._initializationPromise = this._initializationPromise ||
-      Promise.resolve().then(() => this._init());
   }
 
   async *_getFilesStatus(accept = () => true) {
@@ -253,15 +257,16 @@ export default class GitHistory {
 
   async _switchToBranch(branchName, create = true) {
     const versions = await this._run("listBranches");
+    let ref = this._expandRef(branchName);
     // Check the branch
     if (versions.indexOf(branchName) < 0) {
       if (!create) return false;
       await this._run("branch", {
         checkout: false,
-        ref: branchName,
+        ref,
       });
     }
-    await this._run("checkout", { ref: branchName });
+    await this._checkout({ ref });
     return true;
   }
 
