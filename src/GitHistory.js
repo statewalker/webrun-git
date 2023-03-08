@@ -116,16 +116,18 @@ export default class GitHistory {
   }
 
   _expandRef(ref) {
-    if (
-      !ref.match(/^[0-9a-f]{5,40}$/) && ref.split("/") === 1 && ref !== "HEAD"
-    ) {
+    let validRef;
+    validRef = ref.match(/^[0-9a-f]{5,40}$/);
+    validRef = validRef || ref.split("/").length > 1;
+    validRef = validRef || ref === "HEAD";
+    if (!validRef) {
       ref = `refs/heads/${ref}`;
     }
     return ref;
   }
 
   async _checkout({ ref } = {}) {
-    ref = this._expandRef(ref);
+    // ref = this._expandRef(ref);
     return await this._run("checkout", { ref });
   }
 
@@ -147,7 +149,8 @@ export default class GitHistory {
   async _saveFiles(
     { filter = () => true, branchName, message } = {},
   ) {
-    branchName = branchName || await this.getCurrentBranch() || this.workingBranch;
+    let ref = branchName || await this.getCurrentBranch() || this.workingBranch;
+    ref = this._expandRef(ref);
     let commitId;
     const list = await this._visitNonCommittedFiles({
       filter,
@@ -156,14 +159,14 @@ export default class GitHistory {
     if (list.length) {
       message = message ? message + "\n\n" : "";
       message += list.join("\n");
-      commitId = await this._run("commit", { message, ref: branchName });
+      commitId = await this._run("commit", { message, ref });
       // FIXME: THIS IS A HACK! (a workaround the bug of the isomorphic-git);
       await this._run("writeRef", {
-        ref: `refs/heads/${branchName}`,
+        ref,
         value: commitId,
         force: true,
       });
-      await this._checkout({ ref: branchName });
+      await this._checkout({ ref });
     }
     return {
       commitId,
@@ -179,7 +182,6 @@ export default class GitHistory {
       const ok = await accept(info);
       return ok === undefined || Boolean(ok);
     });
-
     for await (let info of it) {
       if (info.kind === "directory") continue;
       const status = await this._run("status", {
@@ -200,35 +202,34 @@ export default class GitHistory {
 
   async _init() {
     const mainBranch = this.mainBranch;
+    // const mainBranchRef = this._expandRef(mainBranch);
     const versions = await this._run("listBranches");
     if (!versions.length) {
       // Initialize history
-      await this._run("init", {
-        defaultBranch: mainBranch,
-      });
-      await this._run("branch", {
-        checkout: true,
-        ref: mainBranch,
-      });
+      await this._run("init", { defaultBranch: mainBranch });
+      // await this._run("branch", { checkout: true, ref : mainBranch });
 
       const placeholderFile = this.placeholderFileName;
       const fullPath = resolvePath(this.workDir, placeholderFile);
       await this.filesApi.write(fullPath, []);
-      await this._run("add", {
-        filepath: placeholderFile,
-      });
-      await this._run("commit", {
-        message: "Initial commit",
-      });
-    } else if (versions.indexOf(mainBranch) < 0) {
-      // Create the shared (main) branch if it does not exist
-      await this._run("branch", {
-        checkout: true,
-        ref: mainBranch,
-      });
+      await this._run("add", { filepath: placeholderFile });
+      await this._run("commit", { message: "Initial commit" });
     }
 
-    await this._switchToBranch(this.workingBranch, true);
+    // if (versions.indexOf(mainBranch) < 0) {
+    //   // Create the shared (main) branch if it does not exist
+    //   await this._run("branch", {
+    //     checkout: true,
+    //     ref : mainBranch,
+    //   });
+    // }
+
+    const branchName = this.workingBranch;
+    // const branchRef = this._expandRef(branchName);
+    if (versions.indexOf(branchName) < 0) {
+      await this._run("branch", { checkout: true, ref : branchName });
+    }
+    await this._checkout({ ref : branchName });
   }
 
   async _visitNonCommittedFiles(
@@ -253,21 +254,6 @@ export default class GitHistory {
   _isDirty(fileInfo) {
     // See change statuses: https://isomorphic-git.org/docs/en/status
     return (fileInfo.status && fileInfo.status[0] === "*");
-  }
-
-  async _switchToBranch(branchName, create = true) {
-    const versions = await this._run("listBranches");
-    let ref = this._expandRef(branchName);
-    // Check the branch
-    if (versions.indexOf(branchName) < 0) {
-      if (!create) return false;
-      await this._run("branch", {
-        checkout: false,
-        ref,
-      });
-    }
-    await this._checkout({ ref });
-    return true;
   }
 
   // ----------------------------------------

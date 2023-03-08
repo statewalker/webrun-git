@@ -3,9 +3,17 @@ import { newGitHistory, readFileContent, writeFiles } from "../testUtils.js";
 
 describe("Check bugs with commits", function () {
   it(`should properly switch branches after initial commits`, async () => {
+    let trackFiles = false;
     const api = await newGitHistory({
       workDir: "/abc",
       gitDir: "/abc/.git",
+      // log : console.error,
+      // filesApiLog : (options) => {
+      //   if (!trackFiles) return ;
+      //   if (options.stage !== 'enter') return ;
+      //   if (["write"].indexOf(options.method) < 0) return ;
+      //   console.log(`filesApi.${options.method}(`, options.args, `)`);
+      // }
     });
     await writeFiles(api.filesApi, {
       "/abc/index.md": "Hello world",
@@ -32,6 +40,7 @@ describe("Check bugs with commits", function () {
       "/abc/index.md": "*added",
     });
 
+    trackFiles = true;
     // Step 2: save files - check that we are still in a good branch and files are added to the history
     await api.saveFiles();
     await checkStatus(api, workingBranchName, {
@@ -69,14 +78,24 @@ describe("Check bugs with commits", function () {
     }
 
     async function checkStatus(api, branchName, filesStatus) {
-      const branch = await api.getCurrentBranch();
-      expect(branch).to.be(branchName);
-
       const results = {};
       for await (let fileInfo of api.getFilesStatus()) {
         results[fileInfo.path] = fileInfo.status;
       }
       expect(results).to.eql(filesStatus);
+
+      // await showFiles(api, api.gitDir);
+
+      const branch = await api.getCurrentBranch();
+      expect(branch).to.be(branchName);
+    }
+
+    async function showFiles(api, path) {
+      console.log('--------------------')
+      for await (let file of api.filesApi.list(path)) {
+        // if (file.kind !== 'file') continue;
+        console.log('>', file.kind, file.path);
+      }
     }
   });
 });
