@@ -96,13 +96,13 @@ export default class GitHistory {
   async getLog() {
     await this.init();
     return await this._run("log", {
-      ref: await this.getCurrentBranch(),
+      ref: await this.getCurrentBranch() || this.workingBranch,
     });
   }
 
   async getCurrentBranch() {
     await this.init();
-    return await this._run("currentBranch") || this.workingBranch;
+    return await this._run("currentBranch");
   }
 
   async getBranches() {
@@ -130,7 +130,7 @@ export default class GitHistory {
   async _saveFiles(
     { filter = () => true, branchName, message } = {},
   ) {
-    branchName = branchName || await this.getCurrentBranch();
+    branchName = branchName || await this.getCurrentBranch() || this.workingBranch;
     let commitId;
     const list = await this._visitNonCommittedFiles({
       filter,
