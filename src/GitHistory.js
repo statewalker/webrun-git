@@ -102,7 +102,7 @@ export default class GitHistory {
 
   async getCurrentBranch() {
     await this.init();
-    return await this._run("currentBranch");
+    return await this._run("currentBranch") || this.workingBranch;
   }
 
   async getBranches() {
@@ -146,6 +146,7 @@ export default class GitHistory {
         value: commitId,
         force: true,
       });
+      await this._run("checkout", { ref: `refs/heads/${branchName}` });
       // const lastBranchCommitId = await this._run("resolveRef", { ref: branchName });
       // commitId = await this._run("commit", {
       //   message,
