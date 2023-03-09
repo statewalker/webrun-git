@@ -1,0 +1,8 @@
+version: '3'
+services:
+ nginx-git:
+  build: .
+  ports:
+    - 8180:80
+  environment:
+    GIT_POSTBUFFER: 1048576

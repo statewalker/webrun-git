@@ -7,12 +7,13 @@ import {
   writeFiles,
 } from "../testUtils.js";
 
-// const serverConfig = {
-//   url: "https://projects.statewalker.com/StateWalkerProjects/TestRepo.git",
-//   userName: "test-bot",
-//   userPassword: "*testbot-tst*",
-// };
 
+// Note:
+// These parameters are valid for the repository defined in the 
+// "test/docker-nginx-git/" folder.
+// To launch these tests you need to start the Docker container with the 
+// image defined in this directory.
+//  
 const serverConfig = {
   url: "http://localhost:8180/myrepo.git",
   userName: "admin",
@@ -59,54 +60,31 @@ describe("Check synchronization of the local Git repository with the server", fu
     });
 
     await api.syncWithRemote();
+
+    const files = [];
     for await (let file of api.filesApi.list(api.workDir, { recursive : true })) {
       if (file.path.indexOf(api.gitDir) === 0) continue;
-      console.log('>', file);
+      files.push(file.path)
     };
+    expect(files).to.eql(["/abc/hello.txt"]);
 
     const branch = await api.getCurrentBranch();
     expect(branch).to.be(api.mainBranch);
 
     const list = await api.getLog();
-    console.log('LOG:', list);
-
+    expect(Array.isArray(list)).to.be(true);
+    expect(list.length).to.be(1); // Just one commit in the repository
+    expect(list[0].commit.message).to.be("1st commit\n");
 
     await writeFiles(api.filesApi, {
       "/abc/toto.txt" : "This is a TOTO file! " + Date.now()
     });
+
+    console.log(await api.getCurrentBranch());
     await api.saveFiles();
+    console.log(await api.getCurrentBranch());
+
     await api.sendToRemote();
 
-    // ----------------------------------
-    async function checkDir(path, control) {
-      const info = await api.filesApi.stats(path);
-      if (!control) expect(info).to.be(null);
-      else {
-        const { lastModified, ...testInfo } = info;
-        expect(testInfo.path).to.eql(path);
-        expect(testInfo).to.eql(control);
-      }
-    }
-
-    async function checkStatus(api, branchName, filesStatus) {
-      const results = {};
-      for await (let fileInfo of api.getFilesStatus()) {
-        results[fileInfo.path] = fileInfo.status;
-      }
-      expect(results).to.eql(filesStatus);
-
-      // await showFiles(api, api.gitDir);
-
-      const branch = await api.getCurrentBranch();
-      expect(branch).to.be(branchName);
-    }
-
-    async function showFiles(api, path) {
-      console.log("--------------------");
-      for await (let file of api.filesApi.list(path)) {
-        // if (file.kind !== 'file') continue;
-        console.log(">", file.kind, file.path);
-      }
-    }
   });
 });
