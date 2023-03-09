@@ -14,7 +14,7 @@ import {
 // };
 
 const serverConfig = {
-  url: "http://localhost:8180/",
+  url: "http://localhost:8180/myrepo.git",
   userName: "admin",
   userPassword: "admin",
 }

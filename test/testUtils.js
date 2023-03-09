@@ -1,7 +1,7 @@
 import { addFilesApiLogger, MemFilesApi } from "@statewalker/webrun-files";
 import GitHistory from "../src/GitHistory.js";
 import * as git from "isomorphic-git";
-import http from "isomorphic-git/http/web/index.js";
+import http from "isomorphic-git/http/node/index.js";
 import expect from "expect.js";
 import { NodeFilesApi } from "@statewalker/webrun-files";
 import fsPromises from "fs/promises";
