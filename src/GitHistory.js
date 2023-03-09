@@ -10,7 +10,7 @@ class HistoryConfigurationError extends HistoryError {
 class NoServerDefinedError extends HistoryConfigurationError {
 }
 
-const base64Encoder = typeof window === 'undefined'
+const base64Encoder = typeof window === "undefined"
   ? (str) => Buffer.from(str, "utf8").toString("base64")
   : window.btoa;
 
@@ -37,7 +37,9 @@ export default class GitHistory {
       throw new HistoryConfigurationError("IsomorphicGit API is not defined.");
     }
     if (!this.gitHttp) {
-      throw new HistoryConfigurationError("IsomorphicGit HTTP connector is not defined.");
+      throw new HistoryConfigurationError(
+        "IsomorphicGit HTTP connector is not defined.",
+      );
     }
     if (!this.filesApi) {
       throw new HistoryConfigurationError("FilesApi is not defined");
@@ -52,7 +54,7 @@ export default class GitHistory {
   }
 
   get git() {
-    return this.options.git;  
+    return this.options.git;
   }
 
   get gitHttp() {
@@ -64,7 +66,11 @@ export default class GitHistory {
   }
 
   get userName() {
-    return this.options.userName;
+    return this.options.userName || "";
+  }
+
+  get userPassword() {
+    return this.options.userPassword || "";
   }
 
   get userEmail() {
@@ -109,15 +115,11 @@ export default class GitHistory {
 
   async setRemoteServerUrl(url) {
     await this.init();
-    const mainServerName = this.remoteServerName;
-    await this._run("addRemote", {
-      remote: mainServerName,
-      url,
-    });
+    await this._setRemoteServerUrl(url);
     return this.getRemoteServerUrl();
   }
 
-  async syncWithRemote(authConfig = {}) {
+  async syncWithRemote() {
     await this.init();
     const url = await this.getRemoteServerUrl();
     if (!url) throw new NoServerDefinedError();
@@ -125,50 +127,45 @@ export default class GitHistory {
     const branch = this.mainBranch;
     await this._run("fetch", {
       url,
-      http : this.gitHttp,
+      http: this.gitHttp,
       singleBranch: true,
       ref: branch,
-      remoteRef : branch,
-      track : true,
+      remoteRef: branch,
+      track: true,
       onAuth: () => {
-        const {
-          username,
-          password,
-        } = authConfig;
-        const headers = {
-          Authorization: `Basic ${
-            base64Encoder(`${username}:${password}`)
-          }`,
-        };
         return {
-          headers,
+          headers: {
+            Authorization: `Basic ${
+              base64Encoder(`${this.userName}:${this.userPassword}`)
+            }`,
+          },
         };
       },
     });
 
     const commits = await this._run("log", {
-      ref : `${mainServerName}/${branch}`,
-      depth: 1
+      ref: `${mainServerName}/${branch}`,
+      depth: 1,
     });
     const lastCommit = commits.pop();
     const commitId = lastCommit.oid;
     await this._run("writeRef", {
-      ref: 'HEAD',
+      ref: "HEAD",
       value: commitId,
-      force: true
-    })
+      force: true,
+    });
     await this._run("writeRef", {
       ref: `refs/heads/${branch}`,
-      value: 'HEAD',
-      force: true
-    })
+      value: "HEAD",
+      force: true,
+    });
     await this._run("checkout", {
-      ref : branch,
-      remote : mainServerName,
+      ref: branch,
+      remote: mainServerName,
       // noUpdateHead : true,
       track: true,
-      force : true
-    })
+      force: true,
+    });
   }
 
   // -------------------
@@ -320,16 +317,11 @@ export default class GitHistory {
       await this.filesApi.write(fullPath, []);
       await this._run("add", { filepath: placeholderFile });
       await this._run("commit", { message: "Initial commit" });
+
+      if (this.options.url) {
+        await this._setRemoteServerUrl(this.options.url);
+      }
     }
-
-    // if (versions.indexOf(mainBranch) < 0) {
-    //   // Create the shared (main) branch if it does not exist
-    //   await this._run("branch", {
-    //     checkout: true,
-    //     ref : mainBranch,
-    //   });
-    // }
-
     const branchName = this.workingBranch;
     // const branchRef = this._expandRef(branchName);
     if (versions.indexOf(branchName) < 0) {
@@ -337,6 +329,15 @@ export default class GitHistory {
     }
     await this._checkout({ ref: branchName });
   }
+
+  async _setRemoteServerUrl(url) {
+    const mainServerName = this.remoteServerName;
+    await this._run("addRemote", {
+      remote: mainServerName,
+      url,
+    });
+  }
+
 
   async _visitNonCommittedFiles(
     { filter = () => true, action = async () => {} } = {},

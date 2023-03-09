@@ -9,12 +9,23 @@ import {
 
 const serverConfig = {
   url: "https://projects.statewalker.com/StateWalkerProjects/TestRepo.git",
-  username: "test-bot",
-  password: "*testbot-tst*",
+  userName: "test-bot",
+  userPassword: "*testbot-tst*",
 };
 
 describe("Check synchronization of the local Git repository with the server", function () {
-  it(`should be able to add and retrieve configurations for remote servers`, async () => {
+
+  it(`should initialize the git history with a predefined server URL`, async () => {
+    const api = await newGitHistory({
+      ...serverConfig, // this config contains a server URL
+      workDir: "/abc",
+      gitDir: "/abc/.git",
+    });
+    let url = await api.getRemoteServerUrl();
+    expect(url).to.eql(serverConfig.url);
+  });
+
+  it(`should be able to explicitly add and retrieve configurations for remote servers`, async () => {
     const api = await newGitHistory({
       workDir: "/abc",
       gitDir: "/abc/.git",
@@ -28,6 +39,7 @@ describe("Check synchronization of the local Git repository with the server", fu
 
   it(`should be able to checkout a remote repository`, async () => {
     const api = await newGitHistory({
+      ...serverConfig,
       persistent : true,
       workDir: "/abc",
       gitDir: "/abc/.git",
