@@ -42,7 +42,7 @@
   "scripts": {
     "eslint": "eslint src",
     "rollup": "rollup -c",
-    "test": "docker-compose -f ./docker-compose-nginx-git.yml up -d && mocha -R spec ./test/index.js && docker-compose -f ./docker-compose-nginx-git.yml down && yarn eslint",
+    "test": "rm -fr ./test && cp -r ./test/nginx-git-template ./test/nginx-git && docker-compose -f ./docker-compose-nginx-git.yml up -d && mocha -R spec ./test/index.js && docker-compose -f ./docker-compose-nginx-git.yml down && yarn eslint",
     "prepublishOnly": "rm -rf dist && yarn test && yarn rollup"
   },
   "sideEffects": false,

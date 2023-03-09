@@ -5,3 +5,4 @@ tmp
 dist
 test-data
 data-*
+test/nginx-git
