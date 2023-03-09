@@ -52,8 +52,7 @@ describe("Check synchronization of the local Git repository with the server", fu
       // }
     });
 
-    await api.setRemoteServerUrl(serverConfig.url);
-    await api.syncWithRemote(serverConfig);
+    await api.syncWithRemote();
     for await (let file of api.filesApi.list(api.workDir, { recursive : true })) {
       if (file.path.indexOf(api.gitDir) === 0) continue;
       console.log('>', file);
