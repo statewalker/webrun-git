@@ -1,16 +1,21 @@
 import { MemFilesApi, NodeFilesApi } from "@statewalker/webrun-files";
 import * as git from "isomorphic-git";
+import gitHttp from "isomorphic-git/http/node/index.js";
 import GitHistory from "../src/GitHistory.js";
 import expect from "expect.js";
 import { newGitHistory } from "./testUtils.js";
 
 describe("GitHistory", function () {
-
   it(`should rise an error if there is there is no Isomorphic Git instances defined`, async () => {
     let error;
     try {
-      const git = undefined;      
-      new GitHistory({ git, filesApi : new MemFilesApi(), userName: "JohnSmith" });
+      const git = undefined;
+      new GitHistory({
+        git,
+        gitHttp,
+        filesApi: new MemFilesApi(),
+        userName: "JohnSmith",
+      });
     } catch (e) {
       error = e;
     }
@@ -18,13 +23,11 @@ describe("GitHistory", function () {
     expect(error.message).to.eql("IsomorphicGit API is not defined.");
   });
 
-
-
   it(`should rise an error if there is no FilesApi defined`, async () => {
     let error;
     try {
       const filesApi = undefined;
-      new GitHistory({ git, filesApi, userName: "JohnSmith" });
+      new GitHistory({ git, gitHttp, filesApi, userName: "JohnSmith" });
     } catch (e) {
       error = e;
     }
@@ -35,7 +38,12 @@ describe("GitHistory", function () {
   it(`should rise an error if there is no user's name defined`, async () => {
     let error;
     try {
-      new GitHistory({ git, filesApi: new MemFilesApi(), userName: undefined });
+      new GitHistory({
+        git,
+        gitHttp,
+        filesApi: new MemFilesApi(),
+        userName: undefined,
+      });
     } catch (e) {
       error = e;
     }
@@ -77,6 +85,7 @@ describe("GitHistory", function () {
     const filesApi = new MemFilesApi();
     const api = new GitHistory({
       git,
+      gitHttp,
       userName: "JohnSmith",
       userEmail: "john.smith@foo.bar",
       // userBranch : "john-smith",
@@ -97,38 +106,38 @@ describe("GitHistory", function () {
     expect(configFileInfo.path).to.be("/abc/.git/config");
   });
 
-//   it(`should successfully initialize the history`, async () => {
-//     const files = {
-//       "/abc/about/team.md": "This document describes our super-team!",
-//       "/abc/README.md": "Welcome to the project! -" + Date.now(),
-//       "/abc/js/index.js": "console.log('Abc');",
-//     };
-//     // const api = newGitHistory({});
+  //   it(`should successfully initialize the history`, async () => {
+  //     const files = {
+  //       "/abc/about/team.md": "This document describes our super-team!",
+  //       "/abc/README.md": "Welcome to the project! -" + Date.now(),
+  //       "/abc/js/index.js": "console.log('Abc');",
+  //     };
+  //     // const api = newGitHistory({});
 
-//     const filesApi = new NodeFilesApi({
-//       fs: fsPromises,
-//       rootDir: new URL("./data-workspaces", import.meta.url).pathname,
-//     });
-//     const api = new GitHistory({
-//       log: console.error,
-//       userName: "JohnSmith",
-//       userEmail: "john.smith@foo.bar",
-//       userBranch : "john-smith",
-//       filesApi,
-//       workDir: "/abc",
-//     });
-//     await api.init();
-// return ;
-//     await writeFiles(api.filesApi, files);
+  //     const filesApi = new NodeFilesApi({
+  //       fs: fsPromises,
+  //       rootDir: new URL("./data-workspaces", import.meta.url).pathname,
+  //     });
+  //     const api = new GitHistory({
+  //       log: console.error,
+  //       userName: "JohnSmith",
+  //       userEmail: "john.smith@foo.bar",
+  //       userBranch : "john-smith",
+  //       filesApi,
+  //       workDir: "/abc",
+  //     });
+  //     await api.init();
+  // return ;
+  //     await writeFiles(api.filesApi, files);
 
-//     // for await (let f of api.getStatus()) {
+  //     // for await (let f of api.getStatus()) {
 
-//     // }
-//     // const status = await api.getStatus();
-//     // console.log('>>', status);
-//     const versions = await api.getVersions();
-//     // expect(versions).to.eql([]);
+  //     // }
+  //     // const status = await api.getStatus();
+  //     // console.log('>>', status);
+  //     const versions = await api.getVersions();
+  //     // expect(versions).to.eql([]);
 
-//     await api.saveFiles();
-//   });
+  //     await api.saveFiles();
+  //   });
 });

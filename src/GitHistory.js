@@ -1,6 +1,19 @@
 import IsomorphicGitFs from "./IsomorphicGitFs.js";
 import resolvePath from "./resolvePath.js";
 
+class HistoryError extends Error {
+}
+
+class HistoryConfigurationError extends HistoryError {
+}
+
+class NoServerDefinedError extends HistoryConfigurationError {
+}
+
+const base64Encoder = typeof window === 'undefined'
+  ? (str) => Buffer.from(str, "utf8").toString("base64")
+  : window.btoa;
+
 /**
  * This class provides a simplified workflow of history management for "projects" -
  * folders under version control with Git.
@@ -20,17 +33,30 @@ import resolvePath from "./resolvePath.js";
 export default class GitHistory {
   constructor(options = {}) {
     this.options = options;
-    if (!this.git) throw new Error("IsomorphicGit API is not defined.");
-    if (!this.filesApi) throw new Error("FilesApi is not defined");
-    if (!this.userName) throw new Error("The user's name is not defined");
+    if (!this.git) {
+      throw new HistoryConfigurationError("IsomorphicGit API is not defined.");
+    }
+    if (!this.gitHttp) {
+      throw new HistoryConfigurationError("IsomorphicGit HTTP connector is not defined.");
+    }
+    if (!this.filesApi) {
+      throw new HistoryConfigurationError("FilesApi is not defined");
+    }
+    if (!this.userName) {
+      throw new HistoryConfigurationError("The user's name is not defined");
+    }
     if (!this.workingBranch) {
-      throw new Error("The user's branch is not defined");
+      throw new HistoryConfigurationError("The user's branch is not defined");
     }
     this._fs = IsomorphicGitFs.newGitFs(this.filesApi);
   }
 
   get git() {
-    return this.options.git;
+    return this.options.git;  
+  }
+
+  get gitHttp() {
+    return this.options.gitHttp;
   }
 
   get filesApi() {
@@ -66,6 +92,86 @@ export default class GitHistory {
   get placeholderFileName() {
     return this.options.placeholderFileName || ".gitkeep";
   }
+
+  // -------------------
+
+  get remoteServerName() {
+    return this.options.remoteServerName || "origin";
+  }
+
+  async getRemoteServerUrl() {
+    await this.init();
+    const list = await this._run("listRemotes");
+    const mainServerName = this.remoteServerName;
+    const entry = list.find(({ remote }) => remote === mainServerName);
+    return entry ? entry.url : null;
+  }
+
+  async setRemoteServerUrl(url) {
+    await this.init();
+    const mainServerName = this.remoteServerName;
+    await this._run("addRemote", {
+      remote: mainServerName,
+      url,
+    });
+    return this.getRemoteServerUrl();
+  }
+
+  async syncWithRemote(authConfig = {}) {
+    await this.init();
+    const url = await this.getRemoteServerUrl();
+    if (!url) throw new NoServerDefinedError();
+    const mainServerName = this.remoteServerName;
+    const branch = this.mainBranch;
+    await this._run("fetch", {
+      url,
+      http : this.gitHttp,
+      singleBranch: true,
+      ref: branch,
+      remoteRef : branch,
+      track : true,
+      onAuth: () => {
+        const {
+          username,
+          password,
+        } = authConfig;
+        const headers = {
+          Authorization: `Basic ${
+            base64Encoder(`${username}:${password}`)
+          }`,
+        };
+        return {
+          headers,
+        };
+      },
+    });
+
+    const commits = await this._run("log", {
+      ref : `${mainServerName}/${branch}`,
+      depth: 1
+    });
+    const lastCommit = commits.pop();
+    const commitId = lastCommit.oid;
+    await this._run("writeRef", {
+      ref: 'HEAD',
+      value: commitId,
+      force: true
+    })
+    await this._run("writeRef", {
+      ref: `refs/heads/${branch}`,
+      value: 'HEAD',
+      force: true
+    })
+    await this._run("checkout", {
+      ref : branch,
+      remote : mainServerName,
+      // noUpdateHead : true,
+      track: true,
+      force : true
+    })
+  }
+
+  // -------------------
 
   log(...args) {
     if (this.options.log) this.options.log(...args);
@@ -227,9 +333,9 @@ export default class GitHistory {
     const branchName = this.workingBranch;
     // const branchRef = this._expandRef(branchName);
     if (versions.indexOf(branchName) < 0) {
-      await this._run("branch", { checkout: true, ref : branchName });
+      await this._run("branch", { checkout: true, ref: branchName });
     }
-    await this._checkout({ ref : branchName });
+    await this._checkout({ ref: branchName });
   }
 
   async _visitNonCommittedFiles(
