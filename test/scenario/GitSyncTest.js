@@ -59,10 +59,17 @@ describe("Check synchronization of the local Git repository with the server", fu
     };
 
     const branch = await api.getCurrentBranch();
-    console.log('BRANCH:', branch);
+    expect(branch).to.be(api.mainBranch);
 
     const list = await api.getLog();
     console.log('LOG:', list);
+
+
+    await writeFiles(api.filesApi, {
+      "/abc/toto.txt" : "This is a TOTO file! " + Date.now()
+    });
+    await api.saveFiles();
+    await api.sendToRemote();
 
     // ----------------------------------
     async function checkDir(path, control) {

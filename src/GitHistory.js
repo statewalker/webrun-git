@@ -119,11 +119,36 @@ export default class GitHistory {
     return this.getRemoteServerUrl();
   }
 
+  async sendToRemote() {
+    await this.init();
+    const url = await this.getRemoteServerUrl();
+    if (!url) throw new NoServerDefinedError();
+    const branch = await this.getCurrentBranch();
+    return await this._run("push", {
+      url,
+      http: this.gitHttp,
+      singleBranch: true,
+      ref: branch,
+      remoteRef: branch,
+      // force: true,
+      onAuth: () => {
+        return {
+          headers: {
+            Authorization: `Basic ${
+              base64Encoder(`${this.userName}:${this.userPassword}`)
+            }`,
+          },
+        };
+      },
+    });
+  }
+
   async syncWithRemote() {
     await this.init();
     const url = await this.getRemoteServerUrl();
     if (!url) throw new NoServerDefinedError();
     const mainServerName = this.remoteServerName;
+    // const branch = await this.getCurrentBranch();
     const branch = this.mainBranch;
     await this._run("fetch", {
       url,
