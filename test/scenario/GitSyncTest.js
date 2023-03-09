@@ -7,21 +7,19 @@ import {
   writeFiles,
 } from "../testUtils.js";
 
-
 // Note:
-// These parameters are valid for the repository defined in the 
+// These parameters are valid for the repository defined in the
 // "test/docker-nginx-git/" folder.
-// To launch these tests you need to start the Docker container with the 
+// To launch these tests you need to start the Docker container with the
 // image defined in this directory.
-//  
+//
 const serverConfig = {
   url: "http://localhost:8180/myrepo.git",
   userName: "admin",
   userPassword: "admin",
-}
+};
 
 describe("Check synchronization of the local Git repository with the server", function () {
-
   it(`should initialize the git history with a predefined server URL`, async () => {
     const api = await newGitHistory({
       ...serverConfig, // this config contains a server URL
@@ -47,7 +45,7 @@ describe("Check synchronization of the local Git repository with the server", fu
   it(`should be able to checkout a remote repository`, async () => {
     const api = await newGitHistory({
       ...serverConfig,
-      persistent : true,
+      persistent: true,
       workDir: "/abc",
       gitDir: "/abc/.git",
       // log : console.error,
@@ -61,11 +59,13 @@ describe("Check synchronization of the local Git repository with the server", fu
 
     await api.syncWithRemote();
 
-    const files = [];
-    for await (let file of api.filesApi.list(api.workDir, { recursive : true })) {
+    let files = [];
+    for await (
+      let file of api.filesApi.list(api.workDir, { recursive: true })
+    ) {
       if (file.path.indexOf(api.gitDir) === 0) continue;
-      files.push(file.path)
-    };
+      files.push(file.path);
+    }
     expect(files).to.eql(["/abc/hello.txt"]);
 
     const branch = await api.getCurrentBranch();
@@ -77,14 +77,13 @@ describe("Check synchronization of the local Git repository with the server", fu
     expect(list[0].commit.message).to.be("1st commit\n");
 
     await writeFiles(api.filesApi, {
-      "/abc/toto.txt" : "This is a TOTO file! " + Date.now()
+      "/abc/toto.txt": "This is a TOTO file! " + Date.now(),
     });
 
-    console.log(await api.getCurrentBranch());
-    await api.saveFiles();
-    console.log(await api.getCurrentBranch());
+    ({ files } = await api.saveFiles());
+    expect(files).to.eql(["toto.txt"]);
 
-    await api.sendToRemote();
-
+    const result = await api.sendToRemote();
+    expect(result.ok).to.be(true);
   });
 });
