@@ -7,11 +7,17 @@ import {
   writeFiles,
 } from "../testUtils.js";
 
+// const serverConfig = {
+//   url: "https://projects.statewalker.com/StateWalkerProjects/TestRepo.git",
+//   userName: "test-bot",
+//   userPassword: "*testbot-tst*",
+// };
+
 const serverConfig = {
-  url: "https://projects.statewalker.com/StateWalkerProjects/TestRepo.git",
-  userName: "test-bot",
-  userPassword: "*testbot-tst*",
-};
+  url: "http://localhost:8180/",
+  userName: "admin",
+  userPassword: "admin",
+}
 
 describe("Check synchronization of the local Git repository with the server", function () {
 
