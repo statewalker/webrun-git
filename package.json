@@ -25,7 +25,7 @@
     "default": "./src/index.js"
   },
   "dependencies": {
-    "@statewalker/webrun-files": "0.0.0"
+    "@statewalker/webrun-files": "^0.3.1"
   },
   "devDependencies": {
     "@statewalker/rollup": "^0.1.5",
