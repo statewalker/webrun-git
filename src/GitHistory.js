@@ -143,6 +143,68 @@ export default class GitHistory {
     });
   }
 
+/*
+
+
+* initLocalRepository()
+  - git init                     # create project
+  - git checkout -b private      # create a local branch
+* shareRepository()
+  - git remote add <URL>         # add reference to the remote repository
+* loadMainBranch()
+  - git fetch origin main        # fetch the content of the remote main branch
+    # IF FAILURE:
+    - git branch main            # create a main branch based on the "null" commit (with emptyTreeId = "4b825dc642cb6eb9a060e54bf8d69288fbee4904")
+    - git push                   # save a newly created main branch
+* loadUserBranch()
+  - git fetch origin user        # fetch the content of the remote user's branch
+    # IF FAILURE:
+    - git log origin/main -1     # get the id of the latest commit in the main
+    - git branch user mainId     # create 
+  - git merge origin/user        # merge the content from the remote origin/user in the private 
+  - gedit                        # resolve conflicts (if any)
+  - git commit -m "Merge"        # merge changes of the remote branch in the private
+* saveChanges()
+  - git add .                    # add changed files to staging
+  - git commit -m "Update"       # save files in the private branch
+* sendUserBranch()
+  - loadUserBranch()             # get all data from the remote branch and merge conflicts
+  - git branch -f user           # set the user branch in the merged content 
+  - git push origin user:user    # sent the current user's branch to the remote server
+* sendMainBranch()               # synchronize with the local content with the main
+  - loadUserBranch()             # synchronize the private branch with the remote user's branch
+  - loadMainBranch()             # load the remote main branch
+  - git merge main               # merge the local private branch with the main (get all contributions from main)
+  - git merge private:user       # fast-forward for the user's remote branch
+  - git push origin user:user    # push the user's remote branch to the server
+  - git merge private:main       # fast-forward for the main branch - integrate local changes
+  - git push origin main:main    # push the main branch with changes to the server
+
+```
+origin/user ----x---x-----------x--
+                     \         /   
+private     -x--------X*-x----x----
+```
+
+```
+origin/main -x----------------x----------x--
+                               \        / <-- should be a merge request
+origin/user ---x---x-------x----\------x----
+                    \     /      \    /
+private     -x-------X*--x--------X*-x------
+```
+
+
+
+  */
+
+
+  // - Checkout main
+  // - Checkout user branch
+  // - Merge user in private
+
+  // 
+
   async syncWithRemote() {
     await this.init();
     const url = await this.getRemoteServerUrl();
