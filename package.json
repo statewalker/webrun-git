@@ -29,11 +29,11 @@
     "isomorphic-git": "^1.25.3"
   },
   "devDependencies": {
-    "@statewalker/rollup": "^0.1.5",
-    "eslint": "^8",
-    "expect.js": "^0.3",
-    "mocha": "^10",
-    "rollup": "^3"
+    "@statewalker/rollup": "^0.1.6",
+    "eslint": "^8.56.0",
+    "expect.js": "^0.3.1",
+    "mocha": "^10.2.0",
+    "rollup": "^4.9.6"
   },
   "repository": {
     "type": "git",
